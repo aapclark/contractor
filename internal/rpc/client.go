@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/aapclark/go-indexer/m/v2/internal/config"
@@ -54,7 +53,7 @@ func (c RpcClient) SubscribeToLatestBlockNumber(ctx context.Context, outCh chan 
 			errCh <- err
 			return
 		case <-ctx.Done():
-			fmt.Println("canceled")
+			// TODO: determine whether to send context error over channel
 			// errCh <- ctx.Err()
 			c.close()
 			return
