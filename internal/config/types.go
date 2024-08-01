@@ -1,8 +1,9 @@
 package config
 
 type RpcConfig struct {
-	ChainId uint   `yaml:"chain_id"`
-	Url     string `yaml:"url"` // todo: consider making this a different type if needed
+	ChainId   uint   `yaml:"chain_id"`
+	Url       string `yaml:"url"` // todo: consider making this a different type if needed
+	StreamUrl string `yaml:"stream_url"`
 	// todo: consider backup urls
 	Blocktime uint `yaml:"blocktime"` // todo this can be replaced by a dynamic block-time determination
 }
