@@ -10,8 +10,8 @@ func TestValidLoadConfig(t *testing.T) {
 	p := "../../config/config_example.yaml"
 	expected := config.AppConfig{
 		Rpcs: []config.RpcConfig{
-			{ChainId: 1, Url: "http://example.com", Blocktime: 10},
-			{ChainId: 2, Url: "http://example2.com", Blocktime: 20},
+			{ChainId: 1, Url: "http://example.com", StreamUrl: "wss://example.com", Blocktime: 10},
+			{ChainId: 2, Url: "http://example2.com", StreamUrl: "wss://example2.com", Blocktime: 20},
 		},
 		Logging: config.LogConfig{
 			Level:    1,

@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/aapclark/go-indexer/m/v2/internal/config"
@@ -10,8 +11,10 @@ import (
 )
 
 type RpcClient struct {
-	Url    string
-	client *ethclient.Client
+	Url        string
+	WsUrl      string
+	wsClient   *ethclient.Client
+	httpClient *ethclient.Client
 }
 
 func NewClient(cfg config.RpcConfig) (*RpcClient, error) {
@@ -19,22 +22,47 @@ func NewClient(cfg config.RpcConfig) (*RpcClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &RpcClient{
-		Url:    cfg.Url,
-		client: c,
+	ws, err := ethclient.Dial(cfg.StreamUrl)
+	if err != nil {
+		return nil, err
 	}
+
+	client := &RpcClient{
+		Url:        cfg.Url,
+		httpClient: c,
+		WsUrl:      cfg.StreamUrl,
+		wsClient:   ws,
+	}
+
 	return client, nil
 }
 
-func (c RpcClient) SubscribeLatestBlockNumber(ch chan *big.Int) error {
-	var err error
-	ctx := context.Background()
-	hCh := make(chan *types.Header)
+func (c RpcClient) SubscribeToLatestBlockNumber(ctx context.Context, outCh chan *big.Int, errCh chan error) {
+	headerCh := make(chan *types.Header)
 
-	_, err = c.client.SubscribeNewHead(ctx, hCh)
-	for header := range hCh {
-		ch <- header.Number
+	s, err := c.wsClient.SubscribeNewHead(ctx, headerCh)
+	if err != nil {
+		errCh <- err
+		return
 	}
 
-	return err
+	for {
+		select {
+		case header := <-headerCh:
+			outCh <- header.Number
+		case err := <-s.Err():
+			errCh <- err
+			return
+		case <-ctx.Done():
+			fmt.Println("canceled")
+			// errCh <- ctx.Err()
+			c.close()
+			return
+		}
+	}
+}
+
+func (c *RpcClient) close() {
+	c.httpClient.Close()
+	c.wsClient.Close()
 }
