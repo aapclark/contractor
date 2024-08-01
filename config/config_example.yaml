@@ -2,9 +2,11 @@
 rpcs:
   - chain_id: 1
     url: "http://example.com"
+    stream_url: "wss://example.com"
     blocktime: 10
   - chain_id: 2
     url: "http://example2.com"
+    stream_url: "wss://example2.com"
     blocktime: 20
 logging:
   level: 1

@@ -1,9 +1,11 @@
 rpcs:
   - chain_id: 1
-    url: "http://example.com"
+    url: "https://eth.drpc.org"
+    stream_url: "wss://eth.drpc.org"
     blocktime: 10
   - chain_id: 2
-    url: "http://example2.com"
+    url: "wss://arb.drpc.org"
+    stream_url: "wss://arbitrum-one-rpc.publicnode.com"
     blocktime: 20
 logging:
   level: 1
