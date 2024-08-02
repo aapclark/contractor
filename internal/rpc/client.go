@@ -4,39 +4,40 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/aapclark/go-indexer/m/v2/internal/config"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-type RpcClient struct {
-	Url        string
-	WsUrl      string
-	wsClient   *ethclient.Client
-	httpClient *ethclient.Client
+// TODO: rename this as more methods are needed than just subscribing
+type RPCSubscriber interface {
+	SubscribeNewHead(context.Context, chan *types.Header) (ethereum.Subscription, error)
+	Close()
 }
 
-func NewClient(cfg config.RpcConfig) (*RpcClient, error) {
-	c, err := ethclient.Dial(cfg.Url)
-	if err != nil {
-		return nil, err
-	}
-	ws, err := ethclient.Dial(cfg.StreamUrl)
-	if err != nil {
-		return nil, err
-	}
+type RPCClient struct {
+	wsClient   RPCSubscriber
+	httpClient RPCSubscriber
+}
 
-	client := &RpcClient{
-		Url:        cfg.Url,
-		httpClient: c,
-		WsUrl:      cfg.StreamUrl,
-		wsClient:   ws,
+func NewRPCClient(httpClient, wsClient RPCSubscriber) (*RPCClient, error) {
+	client := &RPCClient{
+		httpClient: httpClient,
+		wsClient:   wsClient,
 	}
 
 	return client, nil
 }
 
-func (c RpcClient) SubscribeToLatestBlockNumber(ctx context.Context, outCh chan *big.Int, errCh chan error) {
+func NewEthClient(url string) (*ethclient.Client, error) {
+	c, err := ethclient.Dial(url)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func (c RPCClient) SubscribeToLatestBlockNumber(ctx context.Context, outCh chan *big.Int, errCh chan error) {
 	headerCh := make(chan *types.Header)
 
 	s, err := c.wsClient.SubscribeNewHead(ctx, headerCh)
@@ -61,7 +62,7 @@ func (c RpcClient) SubscribeToLatestBlockNumber(ctx context.Context, outCh chan 
 	}
 }
 
-func (c *RpcClient) close() {
+func (c *RPCClient) close() {
 	c.httpClient.Close()
 	c.wsClient.Close()
 }
