@@ -16,19 +16,21 @@ type RPCSubscriber interface {
 }
 
 type RPCClient struct {
-	wsClient   RPCSubscriber
-	httpClient RPCSubscriber
+	WSClient   RPCSubscriber
+	HTTPClient RPCSubscriber
 }
 
-func NewRPCClient(httpClient, wsClient RPCSubscriber) (*RPCClient, error) {
+// NewRPCClient returns an instance of NewRPCClient with the provided http and websocket rpc interfaces
+func NewRPCClient(httpClient, wsClient RPCSubscriber) *RPCClient {
 	client := &RPCClient{
-		httpClient: httpClient,
-		wsClient:   wsClient,
+		HTTPClient: httpClient,
+		WSClient:   wsClient,
 	}
 
-	return client, nil
+	return client
 }
 
+// NewEthClient returns an instance of ethclient.Client connected to the given URL
 func NewEthClient(url string) (*ethclient.Client, error) {
 	c, err := ethclient.Dial(url)
 	if err != nil {
@@ -37,14 +39,18 @@ func NewEthClient(url string) (*ethclient.Client, error) {
 	return c, nil
 }
 
-func (c RPCClient) SubscribeToLatestBlockNumber(ctx context.Context, outCh chan *big.Int, errCh chan error) {
+// SubscribeToLatestBlockNumber subscribes the client to new block data and sends the block number to a channel.
+// Any errors returned by the underlying subscription are send over an error channel
+func (c *RPCClient) SubscribeToLatestBlockNumber(ctx context.Context, outCh chan *big.Int, errCh chan error) {
 	headerCh := make(chan *types.Header)
+	defer close(headerCh)
 
-	s, err := c.wsClient.SubscribeNewHead(ctx, headerCh)
+	s, err := c.WSClient.SubscribeNewHead(ctx, headerCh)
 	if err != nil {
 		errCh <- err
 		return
 	}
+	defer s.Unsubscribe()
 
 	for {
 		select {
@@ -54,8 +60,7 @@ func (c RPCClient) SubscribeToLatestBlockNumber(ctx context.Context, outCh chan 
 			errCh <- err
 			return
 		case <-ctx.Done():
-			// TODO: determine whether to send context error over channel
-			// errCh <- ctx.Err()
+			errCh <- ctx.Err()
 			c.close()
 			return
 		}
@@ -63,6 +68,6 @@ func (c RPCClient) SubscribeToLatestBlockNumber(ctx context.Context, outCh chan 
 }
 
 func (c *RPCClient) close() {
-	c.httpClient.Close()
-	c.wsClient.Close()
+	c.HTTPClient.Close()
+	c.WSClient.Close()
 }
